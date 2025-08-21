@@ -1,14 +1,19 @@
 package main
 
+// TODO: implement "NOT FOUND" logic in GetByTITLE
+// TODO: implement "ALREADY EXISTS" in PostText
+
 import (
 	"fmt"
-	"github.com/IceMAN2377/thfc/internal/models"
+
+	"github.com/IceMAN2377/thfc/internal/repository/postgres"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
+
+	v1http "github.com/IceMAN2377/thfc/internal/transport/http"
 )
 
 func main() {
@@ -30,12 +35,14 @@ func main() {
 
 	fmt.Println("Success to DB")
 
-	app := models.NewRecordHandler(db)
+	repo := postgres.NewRepo(db)
 	mux := http.NewServeMux()
+	v1http.RegEndpoints(logger, mux, repo)
 
-	mux.HandleFunc("POST /texts/", app.PostText)
-	mux.HandleFunc("GET /texts/{title}", app.GetByTitle)
-
-	log.Print("Starting")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	logger.Info("Starting server")
+	err = http.ListenAndServe(":8080", mux)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
